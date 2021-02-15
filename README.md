@@ -21,19 +21,19 @@ A simple application to get started with backend data processing and banking in 
 	- I have avoided any annotation processor such as Lombok or Mapstruct, 
 	so I can leverage off what I can with JPA and Hibernate.
 * I have tried to keep things very simple without adding too many dependencies either.
-* To run on the cli, run ./gradlew, didn't add Jasypt as well, so there shouldn't be any decryption issues with properties, I have kept it very simple.
+* To run on the cli, run `./gradlew`, didn't add Jasypt as well, so there shouldn't be any decryption issues with properties, I have kept it very simple.
 
 ### DB
 * Open bash and run commands:
-- sudo yum install @mysql (RHEL) or other commands for your PC distribution.
-- create user schemaManager@'%' identified by 's3cretP@$$w0rd';
-- create discovery_bank_schema;
-- grant all privileges on discovery_bank_schema.* to schemaManager@'%';
-- flush privileges;
-- open up mysql cli: mysql -uschemaManager -ps3cretP@$$w0rd
+- `sudo yum install @mysql (RHEL) or other commands for your PC distribution.`
+- `create user schemaManager@'%' identified by 's3cretP@$$w0rd';`
+- `create discovery_bank_schema;`
+- `grant all privileges on discovery_bank_schema.* to schemaManager@'%';`
+- `flush privileges;`
+- open up mysql cli: `mysql -uschemaManager -ps3cretP@$$w0rd`
 - run script:
-	1) use discovery_bank_schema;
-	2) run source /{path-to-script}/discoverySchema.sql
+	1) `use discovery_bank_schema;`
+	2) run `source /{path-to-script}/discoverySchema.sql`
 * Make sure that the connection string matches the one in the project.
 
 ### Getting Started ###
