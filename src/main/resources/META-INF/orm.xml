@@ -1,0 +1,170 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<entity-mappings version="2.2"
+	xmlns="http://xmlns.jcp.org/xml/ns/persistence/orm"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://xmlns.jcp.org/xml/ns/persistence/orm http://xmlns.jcp.org/xml/ns/persistence/orm_2_2.xsd">
+
+	<!-- Search Client Account Details -->
+	<named-native-query
+		name="clientAccount.searchTransactionalAccountsByClientId">
+		<query><![CDATA[
+			SELECT
+				ca.CLIENT_ACCOUNT_NUMBER AS clientAccountNumber,
+				act.DESCRIPTION AS description,
+				ca.DISPLAY_BALANCE AS displayBalance
+			FROM
+				client_account ca
+			JOIN account_type act ON
+				ca.account_type_code = act.account_type_code
+			WHERE
+				ca.client_id = :clientId
+				AND act.transactional = :transactional
+			ORDER BY
+				ca.display_balance DESC
+		]]></query>
+	</named-native-query>
+
+	<!-- Find -->
+	<named-native-query
+		name="currencyAccount.searchTransactionalAccountsByCurrencyValue">
+		<query><![CDATA[ 
+			SELECT 
+				ca.CLIENT_ACCOUNT_NUMBER AS clientAccountNumber,
+				ccr.CONVERSION_INDICATOR AS conversionIndicator,
+				ccr.CURRENCY_CODE AS currencyCode,
+				ccr.RATE AS rate,
+				ca.DISPLAY_BALANCE AS displayBalance,
+				c2.DESCRIPTION as currencyDescription,
+				"ZAR" as exchangeCurrencyCode,
+				CASE 
+					WHEN
+					ccr.CONVERSION_INDICATOR = '*' THEN 
+						round((ca.DISPLAY_BALANCE * ccr.RATE), c2.DECIMAL_PLACES)
+					WHEN ccr.CONVERSION_INDICATOR = '/' THEN 
+						round((ca.DISPLAY_BALANCE / ccr.RATE), c2.DECIMAL_PLACES)
+				END AS exchangeAccountBalance
+			FROM 
+				client_account ca
+			LEFT JOIN account_type a ON
+				ca.account_type_code = a.account_type_code
+			INNER JOIN currency_conversion_rate ccr ON
+				ca.currency_code = ccr.currency_code
+			RIGHT join currency c2 on 
+				ca.CURRENCY_CODE = c2.CURRENCY_CODE 
+			WHERE
+				ca.client_id = :clientId
+				AND a.transactional = :transactional
+				AND a.ACCOUNT_TYPE_CODE = 'CFCA'
+			ORDER BY
+				ca.display_balance DESC;
+		]]></query>
+	</named-native-query>
+	
+	<named-native-query name="transactionalQuery.isTransactionalAccount">
+		<query><![CDATA[
+			SELECT
+				acct.TRANSACTIONAL 
+			FROM
+				client_account ca
+			JOIN account_type acct ON
+				ca.ACCOUNT_TYPE_CODE = acct.ACCOUNT_TYPE_CODE 
+			WHERE
+				ca.CLIENT_ACCOUNT_NUMBER = :accountNumber
+		]]></query>
+	</named-native-query>
+	
+	<named-native-query name="clientAccount.findAccountTypeCode">
+		<query><![CDATA[
+			SELECT
+				acct.ACCOUNT_TYPE_CODE 
+			FROM
+				client_account ca
+			JOIN account_type acct ON
+				ca.ACCOUNT_TYPE_CODE = acct.ACCOUNT_TYPE_CODE 
+			WHERE
+				ca.CLIENT_ACCOUNT_NUMBER = :accountNumber
+		]]></query>
+	</named-native-query>
+
+	<named-native-query
+		name="atmAllocation.withdrawal">
+		<query><![CDATA[
+			SELECT
+				a.COUNT AS count,
+				a.ATM_ALLOCATION_ID AS atmAllocationId,
+				a.ATM_ID AS atmId,
+				a.DENOMINATION_ID AS denominationId,
+				d.VALUE AS value,
+				(a.count * d.value) AS denominationSum
+			FROM
+				atm_allocation a
+			LEFT JOIN denomination d ON
+				a.denomination_id = d.denomination_id
+			WHERE
+				a.atm_id = :atmId
+			ORDER BY
+				d.VALUE DESC
+		]]></query>
+	</named-native-query>
+
+	<named-native-query name="updateClientAccountBalance">
+		<query><![CDATA[ 
+		UPDATE
+			client_account
+		SET
+			display_balance = :remainingBalance
+		WHERE
+			client_account_number = :accountNumber
+		]]></query>
+	</named-native-query>
+
+	<named-native-query
+		name="reporting.searchAllAccountsByBalanceCount">
+		<query><![CDATA[ 
+			SELECT
+				ca.CLIENT_ID AS clientId,
+				c.SURNAME AS surname,
+				ca.CLIENT_ACCOUNT_NUMBER AS clientAccountNumber,
+				at2.DESCRIPTION AS description,
+				ca.DISPLAY_BALANCE AS displayBalance
+			FROM
+				client_account ca
+			JOIN client c ON
+				c.CLIENT_ID = ca.CLIENT_ID
+			JOIN account_type at2 ON
+				at2.ACCOUNT_TYPE_CODE = ca.ACCOUNT_TYPE_CODE
+			WHERE at2.TRANSACTIONAL = true
+			ORDER BY
+				ca.DISPLAY_BALANCE DESC;
+		]]></query>
+	</named-native-query>
+
+	<named-native-query name="aggregationQuery.findFinancialStandingById">
+		<query><![CDATA[ 	
+			SELECT
+				c2.TITLE AS title,
+				c2.NAME AS name,
+				c2.SURNAME AS surname,
+				sum(ca.DISPLAY_BALANCE) AS transactionalBalance,
+				(SELECT
+					IFNULL(sum(ca2.DISPLAY_BALANCE), 0)
+				FROM
+					client_account ca2
+				JOIN account_type at3 ON
+					at3.ACCOUNT_TYPE_CODE = ca2.ACCOUNT_TYPE_CODE
+				WHERE
+					ca2.CLIENT_ID = :clientId
+					AND at3.TRANSACTIONAL = false
+					AND at3.ACCOUNT_TYPE_CODE like '%loan%') AS loanBalance
+			FROM
+				client_account ca
+			JOIN client c2 ON
+				c2.CLIENT_ID = ca.CLIENT_ID
+			LEFT JOIN account_type at2 ON
+				at2.ACCOUNT_TYPE_CODE = ca.ACCOUNT_TYPE_CODE
+			WHERE
+				ca.CLIENT_ID = :clientId
+				AND at2.TRANSACTIONAL = true
+		]]></query>
+	</named-native-query>
+</entity-mappings>
